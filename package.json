@@ -1,0 +1,27 @@
+{
+  "name": "agentflow",
+  "version": "0.1.0",
+  "description": "AI-tool-agnostic harness for ticket-driven coding: research → plan (loop) → human gate → code (TDD) → verify → summary → human gate → ship",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": {
+    "agentflow": "./bin/agentflow.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src",
+    "prompts",
+    "templates",
+    "README.md"
+  ],
+  "scripts": {
+    "smoke": "node test/smoke.mjs"
+  },
+  "dependencies": {
+    "yaml": "^2.5.0"
+  }
+}
