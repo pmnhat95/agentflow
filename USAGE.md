@@ -1,6 +1,6 @@
 # agentflow — Hướng dẫn sử dụng
 
-> Tool nằm tại: **`/Users/nhatphan/agentflow`**
+> Tool nằm tại: **`~/Documents/tools/agentflow`** (sau khi push GitHub, đổi sang `git+ssh://...` — xem mục 1)
 > Đây là file hướng dẫn nhanh dành cho dev. Tham khảo chi tiết kiến trúc + lý do design xem `README.md`.
 
 agentflow là **1 workflow chuẩn cho cả team**, chạy được trên **Claude Code**, **Cursor**, hoặc **GitHub Copilot** — dev chọn AI tool nào cũng đi qua cùng các phase:
@@ -14,8 +14,16 @@ prime → init → ticket-audit → plan loop → approve → code (TDD) → ver
 ## 1. Cài đặt (làm 1 lần)
 
 ```bash
-# 1. Link CLI global
-cd /Users/nhatphan/agentflow
+# 1. Lấy tool về máy
+# Cách A — clone từ GitHub (sau khi maintainer push):
+git clone git@github.com:<org>/agentflow.git ~/Documents/tools/agentflow
+
+# Cách B — install global trực tiếp từ git URL (gọn nhất, không cần clone):
+npm install -g git+ssh://git@github.com/<org>/agentflow.git
+# (→ skip 2 lệnh dưới)
+
+# 2. Link CLI global (nếu chọn cách A)
+cd ~/Documents/tools/agentflow
 npm install
 npm link                  # → lệnh `agentflow` chạy được ở bất kỳ đâu
 
@@ -351,7 +359,7 @@ ls .agentflow/audit/<run-id>/
 
 ```bash
 # Setup
-cd /Users/nhatphan/agentflow && npm link
+cd ~/Documents/tools/agentflow && npm install && npm link
 cd ~/your-repo
 agentflow prime
 
