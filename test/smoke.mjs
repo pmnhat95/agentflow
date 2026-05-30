@@ -178,4 +178,46 @@ const haikuCost = estimateCost({ inputText: 'a'.repeat(7000), outputText: 'b'.re
 assert.ok(haikuCost.totalUsd < sonnetCost.totalUsd, `expected haiku < sonnet, got ${haikuCost.totalUsd} vs ${sonnetCost.totalUsd}`);
 console.log('ok  cost estimation: known/unknown models + tier ordering');
 
+// 13. Slash command rendering: one body, three tool formats
+const { COMMANDS, renderClaude, renderCursor, renderCopilot, TARGETS } =
+  await import(path.resolve(__dirname, '..', 'src', 'integrations', 'slash.mjs'));
+assert.ok(COMMANDS.length >= 6, `expected >=6 slash commands, got ${COMMANDS.length}`);
+const planCmd = COMMANDS.find((c) => c.name === 'agentflow-plan');
+assert.ok(planCmd, 'agentflow-plan command must exist');
+
+const claudeOut = renderClaude(planCmd);
+assert.match(claudeOut, /^---\n/, 'claude render has frontmatter');
+assert.match(claudeOut, /allowed-tools:/);
+assert.match(claudeOut, /\$ARGUMENTS/, 'claude render substitutes $ARGUMENTS for arg commands');
+
+const cursorOut = renderCursor(planCmd);
+assert.match(cursorOut, /# agentflow-plan/);
+assert.ok(!cursorOut.includes('allowed-tools'), 'cursor render is plain markdown');
+
+const copilotOut = renderCopilot(planCmd);
+assert.match(copilotOut, /mode: agent/, 'copilot render uses agent mode');
+console.log('ok  slash command rendering: claude/cursor/copilot formats');
+
+// 14. install writes slash files for all three tools
+runCli(['install', 'all']);
+for (const [tool, t] of Object.entries(TARGETS)) {
+  const f = path.join(tmp, t.dir, `agentflow-plan${t.ext}`);
+  assert.ok(fs.existsSync(f), `expected ${tool} command file at ${f}`);
+}
+// Copilot uses the .prompt.md double extension
+assert.ok(fs.existsSync(path.join(tmp, '.github', 'prompts', 'agentflow-ship.prompt.md')));
+console.log('ok  install writes slash commands for claude/cursor/copilot');
+
+// 15. lesson-save CLI persists a lesson the in-editor agent extracted
+fs.writeFileSync(path.join(tmp, 'lesson-body.txt'), 'Prefer the shared retry helper for outbound HTTP.');
+runCli(['lesson-save', '--name', 'shared-retry-helper', '--topic', 'networking',
+        '--triggers', 'retry,http,webhook', '--source', 'review-feedback',
+        '--body-file', path.join(tmp, 'lesson-body.txt')]);
+const lessonFile = path.join(tmp, '.agentflow', 'lessons', 'shared-retry-helper.md');
+assert.ok(fs.existsSync(lessonFile), 'lesson file written');
+const lessonText = fs.readFileSync(lessonFile, 'utf8');
+assert.match(lessonText, /triggers: \[retry, http, webhook\]/);
+assert.match(lessonText, /retry helper/);
+console.log('ok  lesson-save persists a lesson via CLI');
+
 console.log('\nall smoke checks passed');

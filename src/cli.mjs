@@ -2,30 +2,45 @@ import { commands } from './commands/index.mjs';
 
 const USAGE = `agentflow — ticket-driven AI coding harness
 
-Usage:
+▶ RECOMMENDED: drive everything from inside your AI tool's chat window.
+  1. One-time per repo:   agentflow prime  &&  agentflow install
+  2. Then in Claude Code / Cursor / Copilot chat, type:
+       /agentflow-start <TICKET>   → fetch ticket + branch + summary
+       /agentflow-plan             → research + reviewable plan (stops for your review)
+       /agentflow-code             → implement the approved plan (TDD)
+       /agentflow-verify           → run lint/test/build, fix failures
+       /agentflow-ship             → write PR desc, confirm, open PR + comment Jira
+       /agentflow-retro            → after merge: capture lessons
+
+Setup commands:
   agentflow prime              One-time repo scan → .agentflow/codemap.md
-  agentflow init <TICKET>      Fetch ticket, audit it, create branch, init state
-  agentflow plan               Run Researcher↔Planner↔Critic loop (+ QA pause)
-  agentflow approve            Human gate (works for plan or summary phase)
-  agentflow code               Coder phase (TDD: test-first by default)
-  agentflow verify             Run build/test/lint; auto-repair on failure
-  agentflow summary            Generate structured summary of changes
-  agentflow ship               Create PR, comment PR link on ticket
-  agentflow retro [<PR>]       After merge: extract generalizable lessons → .agentflow/lessons/
-  agentflow cost [<run-id>]    Estimate $ spend per role from the audit log (--all for every run)
+  agentflow install [tool]     Write slash commands (claude|cursor|copilot|all; auto-detects)
+
+Helpers (called by the in-editor agent; you rarely run these by hand):
+  agentflow ticket <TICKET>    Fetch ticket + create branch + init state (no AI)
+  agentflow context            Print repo codemap + lessons relevant to the ticket
+  agentflow pr --from <file>   Commit, push, open PR, comment link on Jira
+  agentflow lesson-save ...    Persist a lesson to .agentflow/lessons/
+
+Headless pipeline (for CI or fully-automated 'ai_tool: claude'):
+  agentflow init <TICKET> | plan | approve | code | verify | summary | ship | next
+
+Utilities:
+  agentflow retro [<PR>]       Extract generalizable lessons after merge
+  agentflow cost [<run-id>]    Estimate $ spend (--all for every run)
   agentflow status             Show current phase + artifacts
-  agentflow next               Advance to next phase based on current state
 
 Flags:
   --ai <claude|cursor|copilot>   Override configured AI tool for this run
+  --from <file>                  In 'pr': read PR title/body from this file
   --max-rounds <N>               Override planner loop max rounds (default 3)
   --code-first                   In 'code' phase, write code before tests (default: TDD)
   --heuristic-only               In 'prime' phase, skip the AI overview pass
-  --all                          In 'cost' phase, aggregate across all runs
+  --all                          In 'cost'/'install': all runs / all tools
   --yes                          Skip interactive approval (CI-friendly)
   --help, -h                     Show this help
 
-Configuration: .agentflow/config.yaml (created by 'init')
+Configuration: .agentflow/config.yaml
 State:         .agentflow/state.json
 `;
 

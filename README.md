@@ -12,6 +12,14 @@ retro (after PR merge → learned lessons feed back into future runs)
 
 The CLI is the deterministic part (state, Jira/GitHub calls, two human approval gates). The AI tool of your choice does the thinking, via prompts that enforce a structured output schema and a *grounded* critic that verifies claims against the actual code. The harness gets smarter over time: every merged PR is post-mortemed for generalizable lessons, which are then matched against future tickets and injected into the prompts.
 
+## Two ways to drive it
+
+**A. Slash commands inside your AI tool (recommended).** Run `agentflow prime && agentflow install` once per repo. Then, from inside Claude Code / Cursor / Copilot chat, type `/agentflow-start <TICKET>`, `/agentflow-plan`, `/agentflow-code`, `/agentflow-verify`, `/agentflow-ship`, `/agentflow-retro`. The AI agent orchestrates; the CLI is called by the agent only for deterministic plumbing (Jira fetch, branch, PR, lessons). Human approval gates are the boundaries between commands — typing the next command *is* your approval. **See `ONBOARDING.md`.**
+
+**B. Headless CLI pipeline.** Run the phases yourself from the terminal (`agentflow init <TICKET>`, `plan`, `approve`, `code`, …). Best for CI or fully-unattended `ai_tool: claude` runs. This is what the sections below document.
+
+The two modes share the same `.agentflow/` artifacts, config, codemap, and lessons — pick per-developer or per-task.
+
 ## Prerequisites
 
 - Node ≥ 18
