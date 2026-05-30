@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { agentflowDir, artifactPath } from '../paths.mjs';
+import { artifactPath } from '../paths.mjs';
 import { loadPrompt, extractQuestions, extractCriticVerdict } from '../prompts.mjs';
 import { updateState } from '../state.mjs';
 import { getAdapter } from '../adapters/ai/index.mjs';

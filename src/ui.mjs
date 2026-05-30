@@ -1,6 +1,5 @@
 import readline from 'node:readline';
-import { spawn, spawnSync } from 'node:child_process';
-import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
 export function info(msg) { console.log(msg); }
 export function warn(msg) { console.warn(`! ${msg}`); }
@@ -62,30 +61,7 @@ export function openInEditor(filePath) {
   if (res.status !== 0) warn(`editor exited with status ${res.status}`);
 }
 
-export async function streamCommand(cmd, args, { cwd, input } = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
-    if (input) {
-      child.stdin.write(input);
-      child.stdin.end();
-    } else {
-      child.stdin.end();
-    }
-    child.on('close', (code) => code === 0 ? resolve() : reject(new Error(`${cmd} exited ${code}`)));
-    child.on('error', reject);
-  });
-}
-
 export function runCapture(cmd, args, { cwd, input } = {}) {
   const res = spawnSync(cmd, args, { cwd, input, encoding: 'utf8' });
   return { code: res.status ?? -1, stdout: res.stdout ?? '', stderr: res.stderr ?? '' };
-}
-
-export function showFileTail(filePath, lines = 40) {
-  if (!fs.existsSync(filePath)) return;
-  const data = fs.readFileSync(filePath, 'utf8').split('\n');
-  const tail = data.slice(-lines).join('\n');
-  rule(`tail of ${filePath}`);
-  console.log(tail);
-  rule();
 }

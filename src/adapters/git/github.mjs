@@ -90,9 +90,3 @@ export function createPullRequest({ title, body, base }) {
   const url = (r.stdout.match(/https?:\/\/\S+/) || [])[0] || r.stdout.trim();
   return { url };
 }
-
-export function repoSlug() {
-  const r = runCapture('gh', ['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner']);
-  if (r.code !== 0) return null;
-  return r.stdout.trim();
-}
