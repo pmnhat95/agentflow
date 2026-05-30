@@ -231,4 +231,18 @@ assert.match(lessonText, /triggers: \[retry, http, webhook\]/);
 assert.match(lessonText, /retry helper/);
 console.log('ok  lesson-save persists a lesson via CLI');
 
+// 16. .env loader fills missing vars but never overrides a real export
+const { loadEnvFiles } = await import(path.resolve(__dirname, '..', 'src', 'env.mjs'));
+fs.mkdirSync(path.join(tmp, '.agentflow'), { recursive: true });
+fs.writeFileSync(path.join(tmp, '.agentflow', '.env'),
+  '# creds\nJIRA_EMAIL=from.file@opswat.com\nexport JIRA_TOKEN="tok-123"\nJIRA_BASE_URL=https://x.atlassian.net\n');
+delete process.env.JIRA_EMAIL;
+delete process.env.JIRA_TOKEN;
+process.env.JIRA_BASE_URL = 'https://real-export.atlassian.net'; // real export must win
+loadEnvFiles(tmp);
+assert.strictEqual(process.env.JIRA_EMAIL, 'from.file@opswat.com', 'fills missing var from .env');
+assert.strictEqual(process.env.JIRA_TOKEN, 'tok-123', 'strips quotes + handles export prefix');
+assert.strictEqual(process.env.JIRA_BASE_URL, 'https://real-export.atlassian.net', 'real export not overridden');
+console.log('ok  .env loader fills missing creds, never overrides real exports');
+
 console.log('\nall smoke checks passed');

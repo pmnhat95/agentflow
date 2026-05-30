@@ -8,9 +8,10 @@ function requireEnv(cfg) {
   const baseUrl = cfg.jira?.base_url || process.env.JIRA_BASE_URL;
   const email   = process.env[cfg.jira?.email_env || 'JIRA_EMAIL'];
   const token   = process.env[cfg.jira?.token_env || 'JIRA_TOKEN'];
-  if (!baseUrl) throw new Error('JIRA_BASE_URL not set (or config.jira.base_url).');
-  if (!email)   throw new Error('JIRA_EMAIL not set.');
-  if (!token)   throw new Error('JIRA_TOKEN not set.');
+  const hint = "Set it via `export` in your shell, or (works in any terminal) put it in ~/.agentflow/.env or <repo>/.agentflow/.env as KEY=VALUE.";
+  if (!baseUrl) throw new Error(`JIRA_BASE_URL not set (or config.jira.base_url). ${hint}`);
+  if (!email)   throw new Error(`JIRA_EMAIL not set. ${hint}`);
+  if (!token)   throw new Error(`JIRA_TOKEN not set. ${hint}`);
   return { baseUrl: baseUrl.replace(/\/$/, ''), email, token };
 }
 

@@ -1,4 +1,5 @@
 import { commands } from './commands/index.mjs';
+import { loadEnvFiles } from './env.mjs';
 
 const USAGE = `agentflow — ticket-driven AI coding harness
 
@@ -51,6 +52,10 @@ export async function run(argv) {
     process.stdout.write(USAGE);
     return;
   }
+
+  // Fill missing JIRA_* (and any) creds from .agentflow/.env so it works even
+  // when the editor's terminal didn't source ~/.zshrc. Real exports still win.
+  loadEnvFiles();
 
   const handler = commands[cmd];
   if (!handler) {
