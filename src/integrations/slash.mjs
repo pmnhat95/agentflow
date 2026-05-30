@@ -52,12 +52,57 @@ const SHIP = `You are running the **agentflow SHIP phase**.
 4. After I confirm, run in the terminal: \`agentflow pr --from .agentflow/summary.md\` — this commits, pushes, opens the PR via \`gh\`, and comments the PR link on the Jira ticket.
 5. Report the PR URL.`;
 
-const START = `You are starting an **agentflow** flow for a Jira ticket.
+const START = `You are the **agentflow orchestrator**. Drive the WHOLE pipeline for the ticket in my message, end to end, stopping ONLY at the two human-approval gates below. Between gates you advance automatically — do not ask me to run the next step.
+
+## Absolute rules for the gates
+There are exactly TWO points where you MUST stop, end your turn, and wait for my reply:
+- **GATE 1 — Plan approval** (after writing the plan, before writing any code).
+- **GATE 2 — Ship approval** (after writing the PR description, before creating the PR/commit).
+
+At each gate:
+1. Show me the artifact and a concise summary.
+2. Say exactly: \`⛔ Waiting for approval. Reply "approved" to continue, or tell me what to change.\`
+3. **STOP. End your turn. Do NOT run any further step.** Only continue when my next message is an approval (e.g. "approved", "approve", "ok go", "lgtm"). If I ask for changes, revise the artifact and present the gate again. Never pass a gate on your own.
+
+## Pipeline
+
+### 1. Ticket
+Take the ticket ID from my message. Run: \`agentflow ticket <ID>\`. Read \`.agentflow/ticket.md\`; give me a 3-line summary. If the ticket is too vague to plan, ask me to clarify (this is an allowed extra stop).
+
+### 2. Plan  → then GATE 1
+Run \`agentflow context\` and honor the codemap + lessons. Research the codebase (open every file you'll reference; never guess paths). Write \`.agentflow/plan.md\` with: Scope / AC-coverage table / Files to modify / New files / Test plan (TDD) / Risks & edge cases / Out of scope / Implementation order. Then re-open each referenced file and verify every claim is real (function exists, signature matches, test framework is the repo's). Fix gaps. If something genuinely can't be inferred, ask me (allowed stop).
+**→ Present GATE 1 and STOP.**
+
+### 3. Code  (runs automatically after GATE 1 approval)
+The approved plan is the source of truth. Follow its Implementation order, TDD by default (failing tests first, then implement to green). Stay strictly inside the plan's file list — if you must touch a file outside it, STOP and tell me. Match repo style + lessons.
+
+### 4. Verify  (automatic)
+Run the repo's verification commands (\`.agentflow/config.yaml\` → \`verify.commands\`; if empty, infer lint/test/build and tell me what you ran). On failure, fix the ROOT cause — never skip tests or silence lint. Re-run until green. If it's pre-existing breakage unrelated to this change, STOP and tell me.
+
+### 5. Ship description  → then GATE 2
+Read the diff (\`git diff\` vs base). Write \`.agentflow/summary.md\` following \`.github/pull_request_template.md\` if present, else: What / Why / How / How tested / Breaking changes / Out of scope. First line: \`TITLE: <ID>: <short summary>\`.
+**→ Present GATE 2 and STOP.**
+
+### 6. Create PR  (runs automatically after GATE 2 approval)
+Run: \`agentflow pr --from .agentflow/summary.md\` (commits, pushes, opens the PR via gh, comments the link on Jira). Report the PR URL.
+
+### 7. Auto-retro  (automatic, no gate)
+Compare \`.agentflow/plan.md\` with what actually shipped (\`git diff\` vs base). Extract only **generalizable** "plan-deviation" lessons (where reality differed from the plan in a reusable way). For each, run:
+\`agentflow lesson-save --name <slug> --topic <topic> --triggers "kw1,kw2" --source plan-deviation --body-file <tmpfile>\`.
+Then tell me: lessons captured; run \`/agentflow-retro <PR>\` again AFTER the PR merges to also capture reviewer-feedback lessons. Remind me to commit \`.agentflow/lessons/\`.
+
+## If the session was interrupted
+Before starting, run \`agentflow status\`. If a ticket is already in progress, resume from its current phase instead of re-fetching — do not redo completed phases.`;
+
+const CONTINUE = `Resume the **agentflow** pipeline from wherever it left off.
 
 ## Steps
-1. Take the ticket ID from my message. Run in the terminal: \`agentflow ticket <ID>\`.
-2. Read \`.agentflow/ticket.md\` and give me a 3–5 line plain-language summary of what the ticket asks for, plus anything that looks ambiguous.
-3. Tell me to run \`/agentflow-plan\` when I'm ready to plan.`;
+1. Run \`agentflow status\` to see the current phase and ticket.
+2. Continue the orchestrator pipeline from that phase, following the same rules as \`/agentflow-start\`:
+   - advance automatically between steps,
+   - STOP only at GATE 1 (plan approval) and GATE 2 (ship approval),
+   - present each gate and wait for my "approved" before proceeding.
+3. If the current phase is past both gates, just finish the remaining automatic steps (PR + auto-retro).`;
 
 const RETRO = `You are running the **agentflow RETRO phase** after the PR has merged.
 
@@ -71,12 +116,15 @@ const RETRO = `You are running the **agentflow RETRO phase** after the PR has me
 5. Remind me to commit \`.agentflow/lessons/\` so the team shares the knowledge.`;
 
 export const COMMANDS = [
-  { name: 'agentflow-start',  phase: 'start',  description: 'Start a ticket: fetch from Jira, create branch, summarize', body: START,  argHint: '<TICKET-ID>' },
-  { name: 'agentflow-plan',   phase: 'plan',   description: 'Research + produce a grounded, reviewable implementation plan', body: PLAN, argHint: '[TICKET-ID]' },
-  { name: 'agentflow-code',   phase: 'code',   description: 'Implement the approved plan (TDD)', body: CODE,  argHint: '' },
-  { name: 'agentflow-verify', phase: 'verify', description: 'Run lint/test/build and fix failures at the root', body: VERIFY, argHint: '' },
-  { name: 'agentflow-ship',   phase: 'ship',   description: 'Write PR description, confirm, open PR + comment Jira', body: SHIP, argHint: '' },
-  { name: 'agentflow-retro',  phase: 'retro',  description: 'After merge: extract generalizable lessons', body: RETRO, argHint: '[PR]' },
+  // Primary: one command drives the whole pipeline, stopping only at the 2 gates.
+  { name: 'agentflow-start',    phase: 'start',    description: 'Run the whole pipeline for a ticket; stops only at the 2 approval gates', body: START, argHint: '<TICKET-ID>' },
+  { name: 'agentflow-continue', phase: 'continue', description: 'Resume the pipeline from the current phase (e.g. after an interrupted session)', body: CONTINUE, argHint: '' },
+  // Manual single-phase overrides (re-run or drive one phase by hand):
+  { name: 'agentflow-plan',   phase: 'plan',   description: '[manual] Research + produce a grounded, reviewable plan', body: PLAN, argHint: '[TICKET-ID]' },
+  { name: 'agentflow-code',   phase: 'code',   description: '[manual] Implement the approved plan (TDD)', body: CODE,  argHint: '' },
+  { name: 'agentflow-verify', phase: 'verify', description: '[manual] Run lint/test/build and fix failures at the root', body: VERIFY, argHint: '' },
+  { name: 'agentflow-ship',   phase: 'ship',   description: '[manual] Write PR description, confirm, open PR + comment Jira', body: SHIP, argHint: '' },
+  { name: 'agentflow-retro',  phase: 'retro',  description: 'After merge: extract generalizable lessons (incl. reviewer feedback)', body: RETRO, argHint: '[PR]' },
 ];
 
 // ---- Per-tool rendering -------------------------------------------------

@@ -185,6 +185,17 @@ assert.ok(COMMANDS.length >= 6, `expected >=6 slash commands, got ${COMMANDS.len
 const planCmd = COMMANDS.find((c) => c.name === 'agentflow-plan');
 assert.ok(planCmd, 'agentflow-plan command must exist');
 
+// Orchestrator: /agentflow-start auto-chains with exactly two hard gates
+const startCmd = COMMANDS.find((c) => c.name === 'agentflow-start');
+assert.ok(startCmd, 'agentflow-start orchestrator must exist');
+assert.match(startCmd.body, /GATE 1/, 'orchestrator defines gate 1');
+assert.match(startCmd.body, /GATE 2/, 'orchestrator defines gate 2');
+assert.match(startCmd.body, /Waiting for approval/, 'orchestrator has explicit stop text');
+assert.match(startCmd.body, /agentflow pr --from/, 'orchestrator creates PR after gate 2');
+assert.match(startCmd.body, /agentflow status/, 'orchestrator resumes from state if interrupted');
+assert.ok(COMMANDS.find((c) => c.name === 'agentflow-continue'), 'agentflow-continue must exist');
+console.log('ok  orchestrator: auto-chain with two hard approval gates + resume');
+
 const claudeOut = renderClaude(planCmd);
 assert.match(claudeOut, /^---\n/, 'claude render has frontmatter');
 assert.match(claudeOut, /allowed-tools:/);
